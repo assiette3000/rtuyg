@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
                     hook_attached = false;
                 }
             }
-            
+
             double old_x = character_x;
             double old_y = character_y;
             character_x = hook_end_x - hook_length * std::cos(hook_angle) - 32.;
@@ -147,19 +147,19 @@ int main(int argc, char *argv[])
         }
 
 
-        if (character_vx > 0 && level.data[((int)(character_x/32.)+1)+(int)(character_y/32.)*level.width]) {
+        if (character_vx > 0 && level.data[((int)(character_x/32.)+1)+(int)(character_y/32.+.5)*level.width]) {
             character_x = (((int)(character_x) / 32)) * 32;
         }
-        if (character_vx < 0 && level.data[((int)(character_x/32.))+(int)(character_y/32.)*level.width]) {
+        if (character_vx < 0 && level.data[((int)(character_x/32.))+(int)(character_y/32.+.5)*level.width]) {
             character_x = (((int)(character_x) / 32)+1) * 32;
         }
 
 
-        if (character_vy > 0 && level.data[(int)(character_x/32.)+((int)(character_y/32.)+1)*level.width]) {
+        if (character_vy > 0 && level.data[(int)(character_x/32.+.5)+((int)(character_y/32.)+1)*level.width]) {
             character_vy = 0.;
             character_y = (((int)(character_y) / 32)) * 32;
         }
-        if (character_vy < 0 && level.data[(int)(character_x/32.)+(int)(character_y/32.)*level.width]) {
+        if (character_vy < 0 && level.data[(int)(character_x/32.+.5)+(int)(character_y/32.)*level.width]) {
             character_vy = 0.;
             character_y = (((int)(character_y) / 32)+1) * 32;
         }
