@@ -30,7 +30,9 @@ int main(int argc, char *argv[])
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture_character;
-    SDL_Texture *texture_box;
+    SDL_Texture *texture_box, *texture_spikes;
+
+    bool fullscreen = false;
 
     double character_x = 48., character_y = 64.;
     double character_vx = 0., character_vy = 0.;
@@ -42,6 +44,9 @@ int main(int argc, char *argv[])
     double hook_length = 0.;
     double hook_angle = -M_PI/4.;
     double hook_end_x = 0., hook_end_y = 0.;
+
+    double hook_offset_x = 32.;
+    double hook_direction = 1.;
 
     SDL_Event event;
 
@@ -55,12 +60,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    SDL_SetRenderLogicalPresentation(renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
     texture_character = IMG_LoadTexture(renderer, "../res/img/character.png");
     if (!texture_character) {
         std::cout << "couldn't load character texture." << std::endl;
         return 1;
     }
     texture_box = IMG_LoadTexture(renderer, "../res/img/box.png");
+    texture_spikes = IMG_LoadTexture(renderer, "../res/img/spikes.png");
 
     Level level("lvl1");
     SDL_FRect character_rect = {0,0,32,32};
@@ -73,9 +81,13 @@ int main(int argc, char *argv[])
                 switch (event.key.scancode) {
                     case SDL_SCANCODE_LEFT:
                         character_vx = -4.;
+                        hook_offset_x = 0.;
+                        hook_direction = -1.;
                         break;
                     case SDL_SCANCODE_RIGHT:
                         character_vx = 4.;
+                        hook_offset_x = 32.;
+                        hook_direction = 1.;
                         break;
                     case SDL_SCANCODE_Z:
                         character_vy = -8.;
@@ -87,6 +99,12 @@ int main(int argc, char *argv[])
                             hook_angle = -M_PI/4;
                         }
                         hook_attached = false;
+                        break;
+                    case SDL_SCANCODE_RETURN:
+                        if (event.key.mod & SDL_KMOD_ALT) {
+                            fullscreen = !fullscreen;
+                            SDL_SetWindowFullscreen(window, fullscreen);
+                        }
                         break;
                     default:
                         break;
@@ -135,7 +153,7 @@ int main(int argc, char *argv[])
 
             double old_x = character_x;
             double old_y = character_y;
-            character_x = hook_end_x - hook_length * std::cos(hook_angle) - 32.;
+            character_x = hook_end_x - hook_length * std::cos(hook_angle) * hook_direction - hook_offset_x;
             character_y = hook_end_y - hook_length * std::sin(hook_angle);
             character_vx = character_x - old_x;
             character_vy = character_y - old_y;
@@ -164,13 +182,16 @@ int main(int argc, char *argv[])
             character_y = (((int)(character_y) / 32)+1) * 32;
         }
 
-        if (character_y >= 32.*12.) {
-            character_vy = 0.;
-            character_y = 32.*12.;
+        if (character_y >= 32. * level.height) {
+            // respawn
+            character_x = 48.;
+            character_y = 64;
+            //character_vy = 0.;
+            //character_y = 32. * level.height;
         }
 
         if (hook_shooting) {
-            hook_end_x = character_x + 32. + hook_length * std::cos(hook_angle);
+            hook_end_x = character_x + hook_offset_x + hook_length * std::cos(hook_angle) * hook_direction;
             hook_end_y = character_y + hook_length * std::sin(hook_angle);
         }
         if (hook_shooting && level.data[(int)(hook_end_x/32.)+(int)(hook_end_y/32.)*level.width]) {
@@ -190,10 +211,11 @@ int main(int argc, char *argv[])
         SDL_FRect box_rect = {0, 0, 32, 32};
         for (int y = 0; y < level.height; y++) {
             for (int x = 0; x < level.width; x++) {
-                if (level.data[x+y*level.width]) {
+                if (level.data[x+y*level.width] > 0) {
+                    int tile = level.data[x+y*level.width];
                     box_rect.x = x*32. - camera_x;
                     box_rect.y = y*32. - camera_y;
-                    SDL_RenderTexture(renderer, texture_box, nullptr, &box_rect);
+                    SDL_RenderTexture(renderer, tile == 2 ? texture_spikes : texture_box, nullptr, &box_rect);
                 }
             }
         }
@@ -206,7 +228,7 @@ int main(int argc, char *argv[])
         if (hook_shooting || hook_attached) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_RenderLine(renderer,
-                character_x + 32. - camera_x,
+                character_x + hook_offset_x - camera_x,
                 character_y - camera_y,
                 hook_end_x - camera_x,
                 hook_end_y - camera_y
